@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+}
+
+enum Subject {
+  PHYSICS
+  MATHEMATICS
+}
+
+enum FlashcardCategory {
+  THEOREM
+  FORMULA
+}
+
+enum ActivityType {
+  LESSON
+  FLASHCARD
+  TEST
+  OTHER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String?   @unique
+  passwordHash  String?
+  role          UserRole
+  createdAt     DateTime  @default(now())
+  lastLoginAt   DateTime?
+  
+  lessonsCreated Lesson[]           @relation("LessonCreator")
+  testAttempts   TestAttempt[]
+  studySessions  StudySession[]
+  progress       Progress?
+  
+  @@index([name])
+  @@index([email])
+}
+
+model Lesson {
+  id          String    @id @default(cuid())
+  title       String
+  subject     Subject
+  content     String    @db.Text
+  examples    Json      // Array of example objects
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String
+  createdByUser User    @relation("LessonCreator", fields: [createdBy], references: [id])
+  
+  @@index([subject])
+  @@index([order])
+}
+
+model Flashcard {
+  id        String           @id @default(cuid())
+  subject   Subject
+  category  FlashcardCategory
+  front     String           @db.Text
+  back      String           @db.Text
+  order     Int              @default(0)
+  createdAt DateTime         @default(now())
+  
+  @@index([subject])
+  @@index([category])
+}
+
+model Test {
+  id        String   @id @default(cuid())
+  subject   Subject
+  year      Int
+  questions Json     // Array of question objects
+  createdAt DateTime @default(now())
+  
+  attempts  TestAttempt[]
+  
+  @@index([subject])
+  @@index([year])
+}
+
+model TestAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  testId     String
+  answers    Json     // Object mapping questionId to answer
+  score      Int?
+  completedAt DateTime?
+  timeSpent  Int?     // in seconds
+  
+  user       User     @relation(fields: [userId], references: [id])
+  test       Test     @relation(fields: [testId], references: [id])
+  
+  @@index([userId])
+  @@index([testId])
+}
+
+model StudySession {
+  id           String       @id @default(cuid())
+  userId       String
+  startTime    DateTime     @default(now())
+  endTime      DateTime?
+  duration     Int?         // in minutes
+  activityType ActivityType
+  
+  user         User         @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([startTime])
+}
+
+model Progress {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  totalStudyTime Int      @default(0) // in minutes
+  lastStudyDate  DateTime?
+  
+  user           User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
