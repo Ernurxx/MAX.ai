@@ -19,17 +19,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials) return null
 
-        // Teacher login with email/password
-        if (credentials.role === 'TEACHER') {
-          if (!credentials.email || !credentials.password) return null
-
+        // Email/password login (for both students and teachers)
+        if (credentials.email && credentials.password) {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           })
 
-          if (!user || user.role !== 'TEACHER') return null
-
-          if (!user.passwordHash) return null
+          if (!user || !user.passwordHash) return null
 
           const isValid = await bcrypt.compare(
             credentials.password,
@@ -51,10 +47,8 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // Student login with name
-        if (credentials.role === 'STUDENT') {
-          if (!credentials.name) return null
-
+        // Student login with name only (legacy support)
+        if (credentials.name && !credentials.email) {
           let user = await prisma.user.findFirst({
             where: {
               name: credentials.name,

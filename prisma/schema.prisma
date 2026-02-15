@@ -35,19 +35,23 @@ enum ActivityType {
 model User {
   id            String    @id @default(cuid())
   name          String
+  lastName      String?   // Last name for user profile
   email         String?   @unique
   passwordHash  String?
+  supabaseId    String?   @unique // Supabase user ID for OAuth users
   role          UserRole
   createdAt     DateTime  @default(now())
   lastLoginAt   DateTime?
   
-  lessonsCreated Lesson[]           @relation("LessonCreator")
-  testAttempts   TestAttempt[]
-  studySessions  StudySession[]
-  progress       Progress?
-  
+  lessonsCreated    Lesson[]             @relation("LessonCreator")
+  testAttempts      TestAttempt[]
+  studySessions     StudySession[]
+  progress          Progress?
+  tutorConversations TutorConversation[]
+
   @@index([name])
   @@index([email])
+  @@index([supabaseId])
 }
 
 model Lesson {
@@ -84,6 +88,7 @@ model Test {
   subject   Subject
   year      Int
   questions Json     // Array of question objects
+  pdfUrl    String?  // Link to PDF file (e.g., /tests/fizika_2023.pdf)
   createdAt DateTime @default(now())
   
   attempts  TestAttempt[]
@@ -133,4 +138,30 @@ model Progress {
   user           User     @relation(fields: [userId], references: [id])
   
   @@index([userId])
+}
+
+model TutorConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New chat")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages TutorMessage[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model TutorMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // "user" | "assistant"
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  conversation TutorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
 }

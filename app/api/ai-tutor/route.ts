@@ -24,8 +24,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ response })
   } catch (error) {
     console.error('AI Tutor API error:', error)
+    
+    // More detailed error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Failed to get AI response',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   }

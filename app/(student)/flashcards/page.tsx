@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import { useLanguage } from '@/components/layout/LanguageProvider'
 // Temporary: Use local types until Prisma Client is generated
@@ -18,6 +19,7 @@ interface Flashcard {
 }
 
 export default function FlashcardsPage() {
+  const { data: session } = useSession()
   const [flashcards, setFlashcards] = useState<Flashcard[]>([])
   const [filteredCards, setFilteredCards] = useState<Flashcard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -26,7 +28,45 @@ export default function FlashcardsPage() {
   const [selectedCategory, setSelectedCategory] =
     useState<FlashcardCategory | null>(null)
   const [loading, setLoading] = useState(true)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const { t } = useLanguage()
+
+  // Start study session when component mounts
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const startSession = async () => {
+      try {
+        const response = await fetch('/api/study-session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: session.user.id,
+            activityType: 'FLASHCARD',
+          }),
+        })
+        const data = await response.json()
+        if (data.sessionId) {
+          setSessionId(data.sessionId)
+        }
+      } catch (error) {
+        console.error('Failed to start study session:', error)
+      }
+    }
+
+    startSession()
+
+    // End study session when component unmounts
+    return () => {
+      if (sessionId) {
+        fetch('/api/study-session/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        }).catch(console.error)
+      }
+    }
+  }, [session?.user?.id])
 
   useEffect(() => {
     fetch('/api/flashcards')

@@ -8,10 +8,18 @@ import { useLanguage } from '@/components/layout/LanguageProvider'
 import { Subject } from '@/types/prisma'
 import Link from 'next/link'
 
+interface TestAttempt {
+  id: string
+  score: number
+  completedAt: string
+  timeSpent: number
+}
+
 interface Test {
   id: string
   subject: Subject
   year: number
+  lastAttempt?: TestAttempt | null
 }
 
 export default function PracticeTestPage() {
@@ -21,10 +29,22 @@ export default function PracticeTestPage() {
   const { t } = useLanguage()
 
   useEffect(() => {
-    fetch('/api/tests')
-      .then((res) => res.json())
-      .then((data) => {
-        setTests(data)
+    Promise.all([
+      fetch('/api/tests').then((res) => res.json()),
+      fetch('/api/test-attempts').then((res) => res.json())
+    ])
+      .then(([testsData, attemptsData]) => {
+        const attempts = Array.isArray(attemptsData) ? attemptsData : []
+        // Map last attempt to each test
+        const testsWithAttempts = (Array.isArray(testsData) ? testsData : []).map((test: Test) => {
+          const lastAttempt = attempts
+            .filter((a: any) => a.testId === test.id)
+            .sort((a: any, b: any) => 
+              new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+            )[0]
+          return { ...test, lastAttempt }
+        })
+        setTests(testsWithAttempts)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -92,8 +112,20 @@ export default function PracticeTestPage() {
                     : t('lessons.mathematics')}{' '}
                   {t('test.year')} {test.year}
                 </h3>
+                
+                {test.lastAttempt && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-900 font-medium">
+                      Last Result: {test.lastAttempt.score}%
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      {new Date(test.lastAttempt.completedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                
                 <button className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                  {t('test.start')}
+                  {test.lastAttempt ? 'Retake Test' : t('test.start')}
                 </button>
               </Link>
             ))}

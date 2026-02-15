@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -7,7 +8,7 @@ import { useLanguage } from './LanguageProvider'
 import { AITutor } from '../ai-tutor/AITutor'
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useLanguage()
@@ -19,8 +20,21 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     { href: '/practice-test', label: t('nav.practiceTest') },
   ]
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login')
+    }
+  }, [status, router])
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
+
   if (!session) {
-    router.push('/login')
     return null
   }
 
@@ -38,7 +52,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none ${
                       pathname === item.href
                         ? 'bg-primary-100 text-primary-700'
                         : 'text-gray-700 hover:bg-gray-100'
@@ -53,7 +67,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
               <span className="text-sm text-gray-700">{session.user.name}</span>
               <button
                 onClick={() => signOut()}
-                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none"
               >
                 {t('nav.logout')}
               </button>

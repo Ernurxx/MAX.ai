@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import { useLanguage } from '@/components/layout/LanguageProvider'
 import ReactMarkdown from 'react-markdown'
@@ -19,10 +20,49 @@ interface Lesson {
 export default function LessonDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session } = useSession()
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [allLessons, setAllLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const { t } = useLanguage()
+
+  // Start study session when component mounts
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const startSession = async () => {
+      try {
+        const response = await fetch('/api/study-session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: session.user.id,
+            activityType: 'LESSON',
+          }),
+        })
+        const data = await response.json()
+        if (data.sessionId) {
+          setSessionId(data.sessionId)
+        }
+      } catch (error) {
+        console.error('Failed to start study session:', error)
+      }
+    }
+
+    startSession()
+
+    // End study session when component unmounts
+    return () => {
+      if (sessionId) {
+        fetch('/api/study-session/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        }).catch(console.error)
+      }
+    }
+  }, [session?.user?.id])
 
   useEffect(() => {
     Promise.all([

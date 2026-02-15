@@ -1,7 +1,11 @@
-import { PrismaClient, Subject, FlashcardCategory } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import { PrismaClient, Subject, FlashcardCategory } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import {
+  physics2023Questions,
+  mathematics2023Questions,
+} from '../lib/practice-test-questions';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
   // Create a teacher account
@@ -443,147 +447,33 @@ f'(x) = 6x + 5`,
 
   console.log('Created flashcards')
 
-  // Create sample tests
-  const tests = [
+  // Clear existing tests so we always have exactly our 2 tests with full questions
+  await prisma.testAttempt.deleteMany({})
+  await prisma.test.deleteMany({})
+
+  // Practice tests: 2023 Physics and Mathematics with full questions (en, kk, ru)
+  const practiceTests = [
     {
       subject: Subject.PHYSICS,
       year: 2023,
-      questions: [
-        {
-          id: '1',
-          question: 'What is the acceleration of a 5 kg object when a force of 20 N is applied?',
-          options: ['2 m/s²', '4 m/s²', '5 m/s²', '10 m/s²'],
-          correctAnswer: 1, // 4 m/s²
-        },
-        {
-          id: '2',
-          question: 'A ball is thrown upward with velocity 20 m/s. How long does it take to reach maximum height? (g = 10 m/s²)',
-          options: ['1 s', '2 s', '3 s', '4 s'],
-          correctAnswer: 1, // 2 s
-        },
-        {
-          id: '3',
-          question: 'What is the kinetic energy of a 2 kg object moving at 5 m/s?',
-          options: ['10 J', '25 J', '50 J', '100 J'],
-          correctAnswer: 1, // 25 J
-        },
-        {
-          id: '4',
-          question: 'A 12V battery is connected to a 3Ω resistor. What is the current?',
-          options: ['2 A', '3 A', '4 A', '6 A'],
-          correctAnswer: 2, // 4 A
-        },
-        {
-          id: '5',
-          question: 'Which law states that energy cannot be created or destroyed?',
-          options: [
-            "Newton's First Law",
-            "Newton's Second Law",
-            'Law of Conservation of Energy',
-            "Ohm's Law",
-          ],
-          correctAnswer: 2, // Law of Conservation of Energy
-        },
-      ],
-    },
-    {
-      subject: Subject.PHYSICS,
-      year: 2022,
-      questions: [
-        {
-          id: '1',
-          question: 'What is the formula for gravitational potential energy?',
-          options: ['mgh', '½mv²', 'Fd', 'ma'],
-          correctAnswer: 0, // mgh
-        },
-        {
-          id: '2',
-          question: 'If the voltage across a resistor is 6V and the current is 2A, what is the resistance?',
-          options: ['2Ω', '3Ω', '4Ω', '6Ω'],
-          correctAnswer: 1, // 3Ω
-        },
-        {
-          id: '3',
-          question: 'A car accelerates from 10 m/s to 30 m/s in 5 seconds. What is its acceleration?',
-          options: ['2 m/s²', '4 m/s²', '6 m/s²', '8 m/s²'],
-          correctAnswer: 1, // 4 m/s²
-        },
-      ],
+      pdfUrl: '/tests/fizika_2023.pdf',
+      questions: JSON.parse(JSON.stringify(physics2023Questions)),
     },
     {
       subject: Subject.MATHEMATICS,
       year: 2023,
-      questions: [
-        {
-          id: '1',
-          question: 'What is the solution to x² - 5x + 6 = 0?',
-          options: ['x = 2, 3', 'x = -2, -3', 'x = 1, 6', 'x = -1, -6'],
-          correctAnswer: 0, // x = 2, 3
-        },
-        {
-          id: '2',
-          question: 'What is the derivative of f(x) = 3x² + 2x?',
-          options: ['6x + 2', '3x + 2', '6x', '3x²'],
-          correctAnswer: 0, // 6x + 2
-        },
-        {
-          id: '3',
-          question: 'In a right triangle, if one side is 3 and the hypotenuse is 5, what is the other side?',
-          options: ['2', '4', '6', '8'],
-          correctAnswer: 1, // 4
-        },
-        {
-          id: '4',
-          question: 'What is sin(30°)?',
-          options: ['0', '1/2', '√2/2', '1'],
-          correctAnswer: 1, // 1/2
-        },
-        {
-          id: '5',
-          question: 'What is the integral of 2x?',
-          options: ['x²', 'x² + C', '2x²', '2x² + C'],
-          correctAnswer: 1, // x² + C
-        },
-      ],
-    },
-    {
-      subject: Subject.MATHEMATICS,
-      year: 2022,
-      questions: [
-        {
-          id: '1',
-          question: 'What is the quadratic formula?',
-          options: [
-            'x = (-b ± √(b² - 4ac)) / 2a',
-            'x = (-b ± √(b² + 4ac)) / 2a',
-            'x = (b ± √(b² - 4ac)) / 2a',
-            'x = (-b ± √(b² - 4ac)) / a',
-          ],
-          correctAnswer: 0,
-        },
-        {
-          id: '2',
-          question: 'What is the area of a circle with radius 5?',
-          options: ['10π', '25π', '50π', '100π'],
-          correctAnswer: 1, // 25π
-        },
-        {
-          id: '3',
-          question: 'What is cos(60°)?',
-          options: ['0', '1/2', '√3/2', '1'],
-          correctAnswer: 1, // 1/2
-        },
-      ],
+      pdfUrl: '/tests/matematika_2023.pdf',
+      questions: JSON.parse(JSON.stringify(mathematics2023Questions)),
     },
   ]
 
-  for (const test of tests) {
+  for (const test of practiceTests) {
     await prisma.test.create({
       data: test,
     })
   }
 
-  console.log('Created tests')
+  console.log('Created practice tests (Physics 2023, Mathematics 2023)')
   console.log('Seed completed!')
 }
 

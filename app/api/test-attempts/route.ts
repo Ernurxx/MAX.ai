@@ -3,6 +3,28 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const attempts = await prisma.testAttempt.findMany({
+      where: { userId: session.user.id },
+      orderBy: { completedAt: 'desc' },
+    })
+
+    return NextResponse.json(attempts)
+  } catch (error) {
+    console.error('Fetch test attempts error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
